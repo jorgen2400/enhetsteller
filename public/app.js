@@ -1,0 +1,400 @@
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------------
+  // Konfigurasjon: enhetstyper, størrelser og omregningsfaktor til
+  // "antall 0,5 L øl (4,7 %)" — dette er referanseenheten appen bruker.
+  //
+  // Øl og vin regnes proporsjonalt ut fra volum (samme alkoholprosent
+  // innad i typen). Drink og shot er satt til 1,0 (samme konvensjon som
+  // "en alkoholenhet" i norske retningslinjer: ca. 1 pils = 1 glass vin
+  // = 1 drink = 1 dram). Juster ITEMS under om du vil ha andre faktorer.
+  // ---------------------------------------------------------------------
+  var ITEMS = [
+    { id: "ol_033", group: "ol", label: "0,33 L", icon: "🍺", factor: 0.66 },
+    { id: "ol_04", group: "ol", label: "0,4 L", icon: "🍺", factor: 0.8 },
+    { id: "ol_05", group: "ol", label: "0,5 L", icon: "🍺", factor: 1.0 },
+    { id: "vin_25", group: "vin", label: "2,5 dl", icon: "🍷", factor: 1.0 },
+    { id: "vin_75", group: "vin", label: "7,5 dl", icon: "🍷", factor: 3.0 },
+    { id: "drink", group: "drink", label: "Drink", icon: "🍹", factor: 1.0 },
+    { id: "shot", group: "shot", label: "Shot (4 cl)", icon: "🥃", factor: 1.0 }
+  ];
+
+  var GROUP_ORDER = ["ol", "vin", "drink", "shot"];
+
+  var STORAGE_KEY = "enhetsteller_v1";
+  var DEVICE_KEY = "enhetsteller_device_id";
+
+  // ---------------------------------------------------------------------
+  // Anonym enhets-ID: genereres én gang og lagres lokalt. Serveren bruker
+  // denne til å skille data mellom ulike personer/telefoner — ingen
+  // pålogging. Slettes lokal nettleserdata, mister man koblingen til det
+  // som ligger lagret på serveren fra før (ny, tom ID genereres).
+  // ---------------------------------------------------------------------
+  function makeFallbackId() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0;
+      var v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  function getDeviceId() {
+    try {
+      var id = localStorage.getItem(DEVICE_KEY);
+      if (!id) {
+        id = window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : makeFallbackId();
+        localStorage.setItem(DEVICE_KEY, id);
+      }
+      return id;
+    } catch (e) {
+      return makeFallbackId();
+    }
+  }
+
+  var deviceId = getDeviceId();
+
+  // ---------------------------------------------------------------------
+  // Datalag: localStorage brukes som en lokal, øyeblikkelig og
+  // offline-vennlig kopi. Den ekte kilden til sannhet er Postgres-
+  // databasen på serveren (se server.js) — appen henter derfra ved
+  // oppstart og skriver dit i bakgrunnen ved hver endring.
+  // Struktur: { "YYYY-MM-DD": { ol_033: 2, vin_25: 1, ... } }
+  // ---------------------------------------------------------------------
+  function loadData() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      console.warn("Kunne ikke lese lagrede data, starter tomt.", e);
+      return {};
+    }
+  }
+
+  function saveData(data) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn("Kunne ikke lagre data.", e);
+    }
+  }
+
+  function syncFromServer() {
+    return fetch("/api/entries?device=" + encodeURIComponent(deviceId))
+      .then(function (res) {
+        if (!res.ok) throw new Error("status " + res.status);
+        return res.json();
+      })
+      .then(function (serverData) {
+        data = serverData || {};
+        saveData(data);
+        return true;
+      })
+      .catch(function (e) {
+        console.warn("Kunne ikke hente data fra serveren, bruker lokal kopi.", e);
+        return false;
+      });
+  }
+
+  function pushToServer(dateKey, itemId, count) {
+    fetch("/api/entries", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device: deviceId, date: dateKey, itemId: itemId, count: count })
+    }).catch(function (e) {
+      console.warn("Kunne ikke lagre til serveren (lagret lokalt i mellomtiden).", e);
+    });
+  }
+
+  var data = loadData();
+
+  function todayKey() {
+    var d = new Date();
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+
+  function getDayRecord(key) {
+    return data[key] || {};
+  }
+
+  function setCount(key, itemId, value) {
+    if (!data[key]) data[key] = {};
+    if (value <= 0) {
+      delete data[key][itemId];
+      if (Object.keys(data[key]).length === 0) delete data[key];
+    } else {
+      data[key][itemId] = value;
+    }
+    saveData(data);
+    pushToServer(key, itemId, Math.max(0, value));
+  }
+
+  function changeCount(key, itemId, delta) {
+    var rec = getDayRecord(key);
+    var current = rec[itemId] || 0;
+    var next = Math.max(0, current + delta);
+    setCount(key, itemId, next);
+  }
+
+  function dayTotals(rec) {
+    var count = 0;
+    var units = 0;
+    ITEMS.forEach(function (item) {
+      var n = rec[item.id] || 0;
+      count += n;
+      units += n * item.factor;
+    });
+    return { count: count, units: units };
+  }
+
+  function formatUnits(n) {
+    // Vis maks 1 desimal, uten unødvendig ",0"
+    var rounded = Math.round(n * 10) / 10;
+    return rounded % 1 === 0 ? String(rounded) : String(rounded).replace(".", ",");
+  }
+
+  // ---------------------------------------------------------------------
+  // Dato-formatering (norsk)
+  // ---------------------------------------------------------------------
+  var MONTHS = ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember"];
+  var WEEKDAYS = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
+
+  function parseKey(key) {
+    var parts = key.split("-");
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+
+  function capitalize(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function formatLongDate(key) {
+    var d = parseKey(key);
+    var s = WEEKDAYS[d.getDay()] + " " + d.getDate() + ". " + MONTHS[d.getMonth()] + " " + d.getFullYear();
+    return capitalize(s);
+  }
+
+  function formatDayHeading(key) {
+    var tKey = todayKey();
+    if (key === tKey) return "I dag";
+    var yest = new Date();
+    yest.setDate(yest.getDate() - 1);
+    var yKey = yest.getFullYear() + "-" + String(yest.getMonth() + 1).padStart(2, "0") + "-" + String(yest.getDate()).padStart(2, "0");
+    if (key === yKey) return "I går";
+    return formatLongDate(key);
+  }
+
+  // ---------------------------------------------------------------------
+  // Rendering: "I dag"
+  // ---------------------------------------------------------------------
+  var rowsContainers = {};
+  GROUP_ORDER.forEach(function (g) {
+    rowsContainers[g] = document.getElementById("rows-" + g);
+  });
+
+  function buildTodayRows() {
+    GROUP_ORDER.forEach(function (g) {
+      rowsContainers[g].innerHTML = "";
+    });
+
+    ITEMS.forEach(function (item) {
+      var row = document.createElement("div");
+      row.className = "row";
+      row.dataset.item = item.id;
+
+      var icon = document.createElement("div");
+      icon.className = "row-icon";
+      icon.textContent = item.icon;
+
+      var label = document.createElement("div");
+      label.className = "row-label";
+      label.textContent = item.label;
+
+      var controls = document.createElement("div");
+      controls.className = "row-controls";
+
+      var minus = document.createElement("button");
+      minus.className = "stepper-btn minus";
+      minus.type = "button";
+      minus.textContent = "–";
+      minus.setAttribute("aria-label", "Trekk fra " + item.label);
+
+      var countEl = document.createElement("span");
+      countEl.className = "row-count";
+      countEl.textContent = "0";
+
+      var plus = document.createElement("button");
+      plus.className = "stepper-btn plus";
+      plus.type = "button";
+      plus.textContent = "+";
+      plus.setAttribute("aria-label", "Legg til " + item.label);
+
+      minus.addEventListener("click", function () {
+        changeCount(todayKey(), item.id, -1);
+        renderToday();
+      });
+      plus.addEventListener("click", function () {
+        changeCount(todayKey(), item.id, 1);
+        renderToday();
+      });
+
+      controls.appendChild(minus);
+      controls.appendChild(countEl);
+      controls.appendChild(plus);
+
+      row.appendChild(icon);
+      row.appendChild(label);
+      row.appendChild(controls);
+
+      rowsContainers[item.group].appendChild(row);
+    });
+  }
+
+  function renderToday() {
+    var key = todayKey();
+    var rec = getDayRecord(key);
+
+    ITEMS.forEach(function (item) {
+      var row = document.querySelector('.row[data-item="' + item.id + '"]');
+      if (!row) return;
+      var n = rec[item.id] || 0;
+      row.querySelector(".row-count").textContent = n;
+      var minusBtn = row.querySelector(".minus");
+      minusBtn.disabled = n <= 0;
+    });
+
+    var totals = dayTotals(rec);
+    document.getElementById("todayCount").textContent = totals.count;
+    document.getElementById("todayUnits").textContent = formatUnits(totals.units);
+
+    document.getElementById("dateLabel").textContent = formatLongDate(key);
+  }
+
+  // ---------------------------------------------------------------------
+  // Rendering: "Oversikt"
+  // ---------------------------------------------------------------------
+  function renderOverview() {
+    var keys = Object.keys(data).sort().reverse();
+    var historyEl = document.getElementById("history");
+    var emptyEl = document.getElementById("emptyHistory");
+    historyEl.innerHTML = "";
+
+    var grandCount = 0;
+    var grandUnits = 0;
+
+    keys.forEach(function (key) {
+      var rec = data[key];
+      var totals = dayTotals(rec);
+      grandCount += totals.count;
+      grandUnits += totals.units;
+
+      var card = document.createElement("div");
+      card.className = "day-card";
+
+      var head = document.createElement("div");
+      head.className = "day-card-head";
+
+      var dateEl = document.createElement("div");
+      dateEl.className = "day-date";
+      dateEl.textContent = formatDayHeading(key);
+
+      var unitsEl = document.createElement("div");
+      unitsEl.className = "day-units";
+      unitsEl.textContent = "≈ " + formatUnits(totals.units) + " × 0,5L øl";
+
+      head.appendChild(dateEl);
+      head.appendChild(unitsEl);
+
+      var itemsEl = document.createElement("div");
+      itemsEl.className = "day-items";
+
+      ITEMS.forEach(function (item) {
+        var n = rec[item.id] || 0;
+        if (n <= 0) return;
+        var pill = document.createElement("span");
+        pill.className = "day-item-pill";
+        pill.innerHTML = item.icon + " " + item.label + " &times; <b>" + n + "</b>";
+        itemsEl.appendChild(pill);
+      });
+
+      card.appendChild(head);
+      card.appendChild(itemsEl);
+      historyEl.appendChild(card);
+    });
+
+    document.getElementById("grandCount").textContent = grandCount;
+    document.getElementById("grandUnits").textContent = formatUnits(grandUnits);
+    document.getElementById("dayCountLabel").textContent = keys.length + (keys.length === 1 ? " dag" : " dager");
+
+    emptyEl.classList.toggle("hidden", keys.length > 0);
+    historyEl.classList.toggle("hidden", keys.length === 0);
+  }
+
+  // ---------------------------------------------------------------------
+  // Faner
+  // ---------------------------------------------------------------------
+  var tabs = document.querySelectorAll(".tab");
+  var viewToday = document.getElementById("view-today");
+  var viewOverview = document.getElementById("view-overview");
+  var pageTitle = document.getElementById("pageTitle");
+  var dateLabel = document.getElementById("dateLabel");
+
+  function activateTab(name) {
+    tabs.forEach(function (t) {
+      t.classList.toggle("active", t.dataset.tab === name);
+    });
+    if (name === "today") {
+      viewToday.classList.remove("hidden");
+      viewOverview.classList.add("hidden");
+      pageTitle.textContent = "I dag";
+      dateLabel.classList.remove("hidden");
+      renderToday();
+    } else {
+      viewToday.classList.add("hidden");
+      viewOverview.classList.remove("hidden");
+      pageTitle.textContent = "Oversikt";
+      dateLabel.classList.add("hidden");
+      renderOverview();
+    }
+  }
+
+  tabs.forEach(function (t) {
+    t.addEventListener("click", function () {
+      activateTab(t.dataset.tab);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------------------
+  buildTodayRows();
+  activateTab("today"); // rask, øyeblikkelig visning fra lokal kopi
+
+  // Hent siste data fra serveren (Postgres) og oppdater visningen når den kommer.
+  syncFromServer().then(function () {
+    var activeTab = document.querySelector(".tab.active").dataset.tab;
+    activateTab(activeTab);
+  });
+
+  // Re-render "I dag" hvis appen har ligget åpen over midnatt / blitt hentet frem igjen
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) {
+      var activeTab = document.querySelector(".tab.active").dataset.tab;
+      activateTab(activeTab);
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // Service worker (for offline-bruk etter første åpning)
+  // ---------------------------------------------------------------------
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function (e) {
+        console.warn("Service worker-registrering feilet:", e);
+      });
+    });
+  }
+})();

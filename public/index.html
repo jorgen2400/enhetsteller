@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Enhetsteller</title>
+
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#12141a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Enhetsteller" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app">
+
+  <header class="topbar">
+    <h1 id="pageTitle">I dag</h1>
+    <div id="dateLabel" class="date-label"></div>
+  </header>
+
+  <main id="view-today" class="view">
+
+    <div class="summary-card">
+      <div class="summary-main">
+        <span id="todayCount" class="summary-number">0</span>
+        <span class="summary-suffix">enheter i dag</span>
+      </div>
+      <div class="summary-sub">
+        ≈ <span id="todayUnits">0</span> × 0,5 L øl
+      </div>
+    </div>
+
+    <section class="group" data-group="ol">
+      <h2 class="group-title"><span class="group-icon">🍺</span> Øl 4,7 %</h2>
+      <div class="rows" id="rows-ol"></div>
+    </section>
+
+    <section class="group" data-group="vin">
+      <h2 class="group-title"><span class="group-icon">🍷</span> Vin 12 %</h2>
+      <div class="rows" id="rows-vin"></div>
+    </section>
+
+    <section class="group" data-group="drink">
+      <h2 class="group-title"><span class="group-icon">🍹</span> Drink</h2>
+      <div class="rows" id="rows-drink"></div>
+    </section>
+
+    <section class="group" data-group="shot">
+      <h2 class="group-title"><span class="group-icon">🥃</span> Shot (4 cl)</h2>
+      <div class="rows" id="rows-shot"></div>
+    </section>
+
+    <p class="info-note">1 enhet i oversikten = alkoholmengden i 0,5 L øl (4,7 %). Drink og shot er satt til 1 enhet hver – juster gjerne selv om du drikker sterkere/svakere drinker.</p>
+
+  </main>
+
+  <main id="view-overview" class="view hidden">
+
+    <div class="summary-card">
+      <div class="summary-main">
+        <span id="grandCount" class="summary-number">0</span>
+        <span class="summary-suffix">enheter totalt</span>
+      </div>
+      <div class="summary-sub">
+        ≈ <span id="grandUnits">0</span> × 0,5 L øl &middot; <span id="dayCountLabel">0 dager</span>
+      </div>
+    </div>
+
+    <div id="history" class="history"></div>
+    <p id="emptyHistory" class="info-note hidden">Ingen registreringer ennå. Legg inn dagens enheter på «I dag»-siden.</p>
+
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab active" data-tab="today">
+      <span class="tab-icon">📅</span>
+      <span class="tab-label">I dag</span>
+    </button>
+    <button class="tab" data-tab="overview">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">Oversikt</span>
+    </button>
+  </nav>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

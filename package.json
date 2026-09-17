@@ -1,0 +1,17 @@
+{
+  "name": "enhetsteller-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enhetsteller – app for å telle alkoholenheter, med Postgres-database på Railway",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.11.5"
+  }
+}
