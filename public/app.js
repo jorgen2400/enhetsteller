@@ -401,6 +401,35 @@
   }
 
   // ---------------------------------------------------------------------
+  // Nedtelling til søndag 20. september (vises øverst på resultattavlen)
+  // Målet tolkes i enhetens/nettleserens egen lokale tid (samme mønster
+  // som resten av appen bruker for dato/klokkeslett), så det stemmer med
+  // klokken på telefonen uten egen tidssone-håndtering.
+  // ---------------------------------------------------------------------
+  var COUNTDOWN_TARGET = new Date(2026, 8, 20, 6, 0, 0); // 20. september 2026, kl 06:00
+  var countdownNumberEl = document.getElementById("countdownNumber");
+  var countdownSubEl = document.querySelector(".countdown-sub");
+
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function updateCountdown() {
+    if (!countdownNumberEl) return;
+    var diff = COUNTDOWN_TARGET.getTime() - Date.now();
+    if (diff <= 0) {
+      countdownNumberEl.textContent = "0:00:00";
+      if (countdownSubEl) countdownSubEl.textContent = "Søndag er her! 🎉";
+      return;
+    }
+    var totalSeconds = Math.floor(diff / 1000);
+    var hours = Math.floor(totalSeconds / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    var seconds = totalSeconds % 60;
+    countdownNumberEl.textContent = hours + ":" + pad2(minutes) + ":" + pad2(seconds);
+  }
+
+  // ---------------------------------------------------------------------
   // Rendering: "Resultattavle" (side 3)
   // ---------------------------------------------------------------------
   var nameInput = document.getElementById("nameInput");
@@ -534,6 +563,9 @@
     activateTab(activeTab);
   });
   fetchNameFromServer();
+
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
 
   // Re-render "I dag" hvis appen har ligget åpen over midnatt / blitt hentet frem igjen
   document.addEventListener("visibilitychange", function () {

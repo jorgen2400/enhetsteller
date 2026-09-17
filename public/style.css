@@ -324,6 +324,41 @@ html, body {
   margin-top: 6px;
 }
 
+.countdown-card {
+  background: linear-gradient(145deg, var(--bg-elevated), var(--bg-row));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.countdown-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.countdown-number {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.countdown-sub {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 .scoreboard {
   background: var(--bg-row);
   border: 1px solid var(--border);
