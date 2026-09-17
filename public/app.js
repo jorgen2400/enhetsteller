@@ -334,8 +334,7 @@
     });
 
     var totals = dayTotals(rec);
-    document.getElementById("todayCount").textContent = totals.count;
-    document.getElementById("todayUnits").textContent = formatUnits(totals.units);
+    document.getElementById("todayCount").textContent = formatUnits(totals.units);
 
     document.getElementById("dateLabel").textContent = formatLongDate(key);
   }
@@ -370,7 +369,7 @@
 
       var unitsEl = document.createElement("div");
       unitsEl.className = "day-units";
-      unitsEl.textContent = "≈ " + formatUnits(totals.units) + " × 0,5L øl";
+      unitsEl.textContent = formatUnits(totals.units) + " enheter";
 
       head.appendChild(dateEl);
       head.appendChild(unitsEl);
@@ -392,8 +391,7 @@
       historyEl.appendChild(card);
     });
 
-    document.getElementById("grandCount").textContent = grandCount;
-    document.getElementById("grandUnits").textContent = formatUnits(grandUnits);
+    document.getElementById("grandCount").textContent = formatUnits(grandUnits);
     document.getElementById("dayCountLabel").textContent = keys.length + (keys.length === 1 ? " dag" : " dager");
 
     emptyEl.classList.toggle("hidden", keys.length > 0);
@@ -481,7 +479,7 @@
 
         var unitsEl = document.createElement("div");
         unitsEl.className = "score-units";
-        unitsEl.textContent = formatUnits(row.totalUnits) + " × 0,5L øl";
+        unitsEl.textContent = formatUnits(row.totalUnits) + " enheter";
 
         rowEl.appendChild(rankEl);
         rowEl.appendChild(nameEl);
