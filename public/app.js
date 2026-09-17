@@ -14,6 +14,8 @@
     { id: "ol_033", group: "ol", label: "0,33 L", icon: "🍺", factor: 0.66 },
     { id: "ol_04", group: "ol", label: "0,4 L", icon: "🍺", factor: 0.8 },
     { id: "ol_05", group: "ol", label: "0,5 L", icon: "🍺", factor: 1.0 },
+    { id: "ol_06", group: "ol", label: "0,6 L", icon: "🍺", factor: 1.2 },
+    { id: "ol_075", group: "ol", label: "0,75 L", icon: "🍺", factor: 1.5 },
     { id: "vin_25", group: "vin", label: "2,5 dl", icon: "🍷", factor: 1.0 },
     { id: "vin_75", group: "vin", label: "7,5 dl", icon: "🍷", factor: 3.0 },
     { id: "drink", group: "drink", label: "Drink", icon: "🍹", factor: 1.0 },

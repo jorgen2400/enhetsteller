@@ -4,7 +4,7 @@ const path = require("path");
 const express = require("express");
 const { Pool } = require("pg");
 
-const ITEM_IDS = ["ol_033", "ol_04", "ol_05", "vin_25", "vin_75", "drink", "shot"];
+const ITEM_IDS = ["ol_033", "ol_04", "ol_05", "ol_06", "ol_075", "vin_25", "vin_75", "drink", "shot"];
 
 // Samme omregningsfaktorer til "0,5 L øl-ekvivalenter" som i public/app.js
 // (ITEMS). Holdes i sync manuelt — brukes til å regne ut totalen på
@@ -13,6 +13,8 @@ const ITEM_FACTORS = {
   ol_033: 0.66,
   ol_04: 0.8,
   ol_05: 1.0,
+  ol_06: 1.2,
+  ol_075: 1.5,
   vin_25: 1.0,
   vin_75: 3.0,
   drink: 1.0,
