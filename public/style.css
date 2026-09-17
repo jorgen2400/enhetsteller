@@ -261,6 +261,114 @@ html, body {
 
 .day-item-pill b { color: var(--text); }
 
+/* Scoreboard */
+
+.name-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.name-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.name-row {
+  display: flex;
+  gap: 8px;
+}
+
+.name-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 16px;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.save-name-btn {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 10px;
+  padding: 0 18px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.save-name-btn:active { transform: scale(0.96); }
+
+.name-status {
+  min-height: 16px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+.scoreboard {
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.score-row + .score-row { border-top: 1px solid var(--border); }
+
+.score-rank {
+  width: 26px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.score-row.is-me .score-rank,
+.score-row.is-me .score-name { color: var(--accent); }
+
+.score-name {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-units {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Tab bar */
 
 .tabbar {

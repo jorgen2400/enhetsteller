@@ -27,6 +27,18 @@ public/           – selve appen (HTML/CSS/JS/ikoner/manifest)
   siden (eller avinstallerer/reinstallerer appen), mister man koblingen til det som
   ligger lagret fra før, og får en ny, tom ID.
 
+## Resultattavle (side 3)
+
+Tredje fane i appen. Man skriver inn et navn, som lagres i tabellen `players`
+(`device_id` → `name`, én rad per enhets-ID). `GET /api/scoreboard` summerer alle
+registreringer per enhets-ID (omregnet til 0,5L øl-ekvivalenter, samme faktorer
+som resten av appen — se `ITEM_FACTORS` i `server.js`), og returnerer kun de
+enhets-IDene som har satt et navn, sortert høyest total først.
+
+Merk: siden det ikke er pålogging, er det ingenting i veien for at to personer
+skriver inn samme navn — resultattavlen skiller dem uansett internt på
+enhets-ID, men de vil se ut som duplikater i lista.
+
 ## Deploy til Railway (via GitHub)
 
 1. **Opprett et GitHub-repo** og legg inn alt innholdet i denne mappen (unntatt

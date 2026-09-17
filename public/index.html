@@ -76,6 +76,22 @@
 
   </main>
 
+  <main id="view-scoreboard" class="view hidden">
+
+    <div class="name-card">
+      <label class="name-label" for="nameInput">Ditt navn på resultattavlen</label>
+      <div class="name-row">
+        <input id="nameInput" class="name-input" type="text" maxlength="40" placeholder="Skriv navnet ditt" autocomplete="off" autocapitalize="words" />
+        <button id="saveNameBtn" class="save-name-btn" type="button">Lagre</button>
+      </div>
+      <div id="nameStatus" class="name-status"></div>
+    </div>
+
+    <div id="scoreboard" class="scoreboard"></div>
+    <p id="emptyScoreboard" class="info-note hidden">Ingen har lagt inn navnet sitt ennå. Skriv inn navnet ditt over for å komme på resultattavlen.</p>
+
+  </main>
+
   <nav class="tabbar">
     <button class="tab active" data-tab="today">
       <span class="tab-icon">📅</span>
@@ -84,6 +100,10 @@
     <button class="tab" data-tab="overview">
       <span class="tab-icon">📊</span>
       <span class="tab-label">Oversikt</span>
+    </button>
+    <button class="tab" data-tab="scoreboard">
+      <span class="tab-icon">🏆</span>
+      <span class="tab-label">Resultattavle</span>
     </button>
   </nav>
 

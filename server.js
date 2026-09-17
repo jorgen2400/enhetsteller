@@ -5,8 +5,28 @@ const express = require("express");
 const { Pool } = require("pg");
 
 const ITEM_IDS = ["ol_033", "ol_04", "ol_05", "vin_25", "vin_75", "drink", "shot"];
+
+// Samme omregningsfaktorer til "0,5 L øl-ekvivalenter" som i public/app.js
+// (ITEMS). Holdes i sync manuelt — brukes til å regne ut totalen på
+// resultattavlen direkte i SQL.
+const ITEM_FACTORS = {
+  ol_033: 0.66,
+  ol_04: 0.8,
+  ol_05: 1.0,
+  vin_25: 1.0,
+  vin_75: 3.0,
+  drink: 1.0,
+  shot: 1.0
+};
+
 const DEVICE_RE = /^[a-zA-Z0-9-]{8,64}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const NAME_RE = /^.{1,40}$/;
+
+function unitsCaseSql(itemIdColumn, countColumn) {
+  const cases = ITEM_IDS.map((id) => `WHEN '${id}' THEN ${ITEM_FACTORS[id]}`).join(" ");
+  return `(CASE ${itemIdColumn} ${cases} ELSE 0 END) * ${countColumn}`;
+}
 
 const PORT = process.env.PORT || 3000;
 
@@ -35,6 +55,16 @@ async function initDb() {
       count       INTEGER NOT NULL,
       updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
       PRIMARY KEY (device_id, entry_date, item_id)
+    );
+  `);
+
+  // Navn knyttet til en enhets-ID — kun de som har satt et navn vises på
+  // resultattavlen (side 3).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS players (
+      device_id   TEXT PRIMARY KEY,
+      name        TEXT NOT NULL,
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
 }
@@ -107,6 +137,65 @@ app.put("/api/entries", async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     console.error("PUT /api/entries feilet:", e);
+    res.status(500).json({ error: "serverfeil" });
+  }
+});
+
+// Hent navnet som er lagret for én enhets-ID (for å forhåndsutfylle feltet).
+app.get("/api/player", async (req, res) => {
+  const device = String(req.query.device || "");
+  if (!DEVICE_RE.test(device)) return res.status(400).json({ error: "ugyldig device-id" });
+  try {
+    const { rows } = await pool.query("SELECT name FROM players WHERE device_id = $1", [device]);
+    res.json({ name: rows.length ? rows[0].name : null });
+  } catch (e) {
+    console.error("GET /api/player feilet:", e);
+    res.status(500).json({ error: "serverfeil" });
+  }
+});
+
+// Sett/oppdater navnet knyttet til denne enhets-IDen.
+app.put("/api/player", async (req, res) => {
+  const body = req.body || {};
+  const device = String(body.device || "");
+  const name = String(body.name || "").trim();
+
+  if (!DEVICE_RE.test(device)) return res.status(400).json({ error: "ugyldig device-id" });
+  if (!NAME_RE.test(name)) return res.status(400).json({ error: "ugyldig navn" });
+
+  try {
+    await pool.query(
+      `INSERT INTO players (device_id, name, updated_at)
+       VALUES ($1, $2, now())
+       ON CONFLICT (device_id) DO UPDATE SET name = EXCLUDED.name, updated_at = now()`,
+      [device, name]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("PUT /api/player feilet:", e);
+    res.status(500).json({ error: "serverfeil" });
+  }
+});
+
+// Resultattavle: navn + total antall enheter (omregnet til 0,5L øl), kun for
+// enheter som har satt et navn — sortert høyest total først.
+app.get("/api/scoreboard", async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT p.name AS name,
+             COALESCE(SUM(${unitsCaseSql("e.item_id", "e.count")}), 0) AS total_units
+      FROM players p
+      LEFT JOIN entries e ON e.device_id = p.device_id
+      GROUP BY p.device_id, p.name
+      ORDER BY total_units DESC, p.name ASC
+    `);
+    const scoreboard = rows.map((r) => ({
+      name: r.name,
+      totalUnits: Math.round(Number(r.total_units) * 10) / 10
+    }));
+    res.json(scoreboard);
+  } catch (e) {
+    console.error("GET /api/scoreboard feilet:", e);
     res.status(500).json({ error: "serverfeil" });
   }
 });

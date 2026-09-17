@@ -24,6 +24,7 @@
 
   var STORAGE_KEY = "enhetsteller_v1";
   var DEVICE_KEY = "enhetsteller_device_id";
+  var NAME_KEY = "enhetsteller_name";
 
   // ---------------------------------------------------------------------
   // Anonym enhets-ID: genereres én gang og lagres lokalt. Serveren bruker
@@ -107,6 +108,68 @@
   }
 
   var data = loadData();
+
+  // ---------------------------------------------------------------------
+  // Navn (for resultattavlen) — samme mønster som enheter: lokal kopi for
+  // øyeblikkelig visning, servert lagres i players-tabellen.
+  // ---------------------------------------------------------------------
+  function getLocalName() {
+    try {
+      return localStorage.getItem(NAME_KEY) || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function setLocalName(name) {
+    try {
+      localStorage.setItem(NAME_KEY, name);
+    } catch (e) {
+      console.warn("Kunne ikke lagre navn lokalt.", e);
+    }
+  }
+
+  function fetchNameFromServer() {
+    return fetch("/api/player?device=" + encodeURIComponent(deviceId))
+      .then(function (res) {
+        if (!res.ok) throw new Error("status " + res.status);
+        return res.json();
+      })
+      .then(function (body) {
+        if (body && body.name) {
+          setLocalName(body.name);
+          return body.name;
+        }
+        return getLocalName();
+      })
+      .catch(function (e) {
+        console.warn("Kunne ikke hente navn fra serveren, bruker lokal kopi.", e);
+        return getLocalName();
+      });
+  }
+
+  function saveNameToServer(name) {
+    return fetch("/api/player", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device: deviceId, name: name })
+    }).then(function (res) {
+      if (!res.ok) throw new Error("status " + res.status);
+      return true;
+    });
+  }
+
+  function fetchScoreboard() {
+    return fetch("/api/scoreboard")
+      .then(function (res) {
+        if (!res.ok) throw new Error("status " + res.status);
+        return res.json();
+      })
+      .catch(function (e) {
+        console.warn("Kunne ikke hente resultattavlen.", e);
+        return null;
+      });
+  }
 
   function todayKey() {
     var d = new Date();
@@ -334,11 +397,93 @@
   }
 
   // ---------------------------------------------------------------------
+  // Rendering: "Resultattavle" (side 3)
+  // ---------------------------------------------------------------------
+  var nameInput = document.getElementById("nameInput");
+  var saveNameBtn = document.getElementById("saveNameBtn");
+  var nameStatus = document.getElementById("nameStatus");
+
+  function renderScoreboard() {
+    nameInput.value = getLocalName();
+
+    var listEl = document.getElementById("scoreboard");
+    var emptyEl = document.getElementById("emptyScoreboard");
+    var myName = getLocalName().trim().toLowerCase();
+
+    fetchScoreboard().then(function (rows) {
+      if (!rows) {
+        listEl.innerHTML = "";
+        listEl.classList.add("hidden");
+        emptyEl.textContent = "Fikk ikke hentet resultattavlen akkurat nå. Prøv igjen senere.";
+        emptyEl.classList.remove("hidden");
+        return;
+      }
+
+      listEl.innerHTML = "";
+
+      if (rows.length === 0) {
+        listEl.classList.add("hidden");
+        emptyEl.textContent = "Ingen har lagt inn navnet sitt ennå. Skriv inn navnet ditt over for å komme på resultattavlen.";
+        emptyEl.classList.remove("hidden");
+        return;
+      }
+
+      listEl.classList.remove("hidden");
+      emptyEl.classList.add("hidden");
+
+      rows.forEach(function (row, i) {
+        var rowEl = document.createElement("div");
+        rowEl.className = "score-row";
+        if (row.name && row.name.trim().toLowerCase() === myName) {
+          rowEl.classList.add("is-me");
+        }
+
+        var rankEl = document.createElement("div");
+        rankEl.className = "score-rank";
+        rankEl.textContent = String(i + 1) + ".";
+
+        var nameEl = document.createElement("div");
+        nameEl.className = "score-name";
+        nameEl.textContent = row.name;
+
+        var unitsEl = document.createElement("div");
+        unitsEl.className = "score-units";
+        unitsEl.textContent = formatUnits(row.totalUnits) + " × 0,5L øl";
+
+        rowEl.appendChild(rankEl);
+        rowEl.appendChild(nameEl);
+        rowEl.appendChild(unitsEl);
+        listEl.appendChild(rowEl);
+      });
+    });
+  }
+
+  saveNameBtn.addEventListener("click", function () {
+    var name = nameInput.value.trim();
+    if (!name) {
+      nameStatus.textContent = "Skriv inn et navn først.";
+      return;
+    }
+    setLocalName(name);
+    nameStatus.textContent = "Lagrer …";
+    saveNameToServer(name)
+      .then(function () {
+        nameStatus.textContent = "Lagret!";
+        renderScoreboard();
+      })
+      .catch(function (e) {
+        console.warn("Kunne ikke lagre navn til serveren.", e);
+        nameStatus.textContent = "Lagret lokalt, men fikk ikke sendt til serveren. Prøv igjen senere.";
+      });
+  });
+
+  // ---------------------------------------------------------------------
   // Faner
   // ---------------------------------------------------------------------
   var tabs = document.querySelectorAll(".tab");
   var viewToday = document.getElementById("view-today");
   var viewOverview = document.getElementById("view-overview");
+  var viewScoreboard = document.getElementById("view-scoreboard");
   var pageTitle = document.getElementById("pageTitle");
   var dateLabel = document.getElementById("dateLabel");
 
@@ -346,18 +491,24 @@
     tabs.forEach(function (t) {
       t.classList.toggle("active", t.dataset.tab === name);
     });
+    viewToday.classList.add("hidden");
+    viewOverview.classList.add("hidden");
+    viewScoreboard.classList.add("hidden");
+    dateLabel.classList.add("hidden");
+
     if (name === "today") {
       viewToday.classList.remove("hidden");
-      viewOverview.classList.add("hidden");
       pageTitle.textContent = "I dag";
       dateLabel.classList.remove("hidden");
       renderToday();
-    } else {
-      viewToday.classList.add("hidden");
+    } else if (name === "overview") {
       viewOverview.classList.remove("hidden");
       pageTitle.textContent = "Oversikt";
-      dateLabel.classList.add("hidden");
       renderOverview();
+    } else {
+      viewScoreboard.classList.remove("hidden");
+      pageTitle.textContent = "Resultattavle";
+      renderScoreboard();
     }
   }
 
@@ -378,6 +529,7 @@
     var activeTab = document.querySelector(".tab.active").dataset.tab;
     activateTab(activeTab);
   });
+  fetchNameFromServer();
 
   // Re-render "I dag" hvis appen har ligget åpen over midnatt / blitt hentet frem igjen
   document.addEventListener("visibilitychange", function () {

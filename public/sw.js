@@ -2,7 +2,7 @@
 // Merk: /api/-kall caches aldri her — de skal alltid gå til nettverket
 // (frisk data fra databasen), appen faller selv tilbake til lokal kopi
 // i localStorage om nettverket er nede.
-var CACHE_NAME = "enhetsteller-v2";
+var CACHE_NAME = "enhetsteller-v3";
 var ASSETS = [
   "./",
   "./index.html",
