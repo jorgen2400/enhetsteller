@@ -16,7 +16,7 @@ const ITEM_FACTORS = {
   ol_06: 1.2,
   ol_075: 1.5,
   vin_25: 1.0,
-  vin_75: 3.0,
+  vin_75: 4.0,
   drink: 1.0,
   shot: 1.0
 };

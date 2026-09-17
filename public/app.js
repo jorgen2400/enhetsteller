@@ -5,10 +5,12 @@
   // Konfigurasjon: enhetstyper, størrelser og omregningsfaktor til
   // "antall 0,5 L øl (4,7 %)" — dette er referanseenheten appen bruker.
   //
-  // Øl og vin regnes proporsjonalt ut fra volum (samme alkoholprosent
-  // innad i typen). Drink og shot er satt til 1,0 (samme konvensjon som
-  // "en alkoholenhet" i norske retningslinjer: ca. 1 pils = 1 glass vin
-  // = 1 drink = 1 dram). Juster ITEMS under om du vil ha andre faktorer.
+  // Øl regnes proporsjonalt ut fra volum (samme alkoholprosent innad i
+  // typen). Vin har egne, faste faktorer: et glass vin = 1 enhet (samme
+  // konvensjon som "en alkoholenhet" i norske retningslinjer: ca. 1 pils
+  // = 1 glass vin = 1 drink = 1 dram), en flaske vin = 4 enheter (satt
+  // direkte, ikke bare volumskalert). Drink og shot er satt til 1,0.
+  // Juster ITEMS under om du vil ha andre faktorer.
   // ---------------------------------------------------------------------
   var ITEMS = [
     { id: "ol_033", group: "ol", label: "0,33 L", icon: "🍺", factor: 0.66 },
@@ -16,8 +18,8 @@
     { id: "ol_05", group: "ol", label: "0,5 L", icon: "🍺", factor: 1.0 },
     { id: "ol_06", group: "ol", label: "0,6 L", icon: "🍺", factor: 1.2 },
     { id: "ol_075", group: "ol", label: "0,75 L", icon: "🍺", factor: 1.5 },
-    { id: "vin_25", group: "vin", label: "2,5 dl", icon: "🍷", factor: 1.0 },
-    { id: "vin_75", group: "vin", label: "7,5 dl", icon: "🍷", factor: 3.0 },
+    { id: "vin_25", group: "vin", label: "Glass vin", icon: "🍷", factor: 1.0 },
+    { id: "vin_75", group: "vin", label: "Flaske vin", icon: "🍷", factor: 4.0 },
     { id: "drink", group: "drink", label: "Drink", icon: "🍹", factor: 1.0 },
     { id: "shot", group: "shot", label: "Shot (4 cl)", icon: "🥃", factor: 1.0 }
   ];
